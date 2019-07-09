@@ -4,8 +4,6 @@
 #include "driver_types.h"
 #include "cuda_runtime_api.h"
 
-#include <sst/core/output.h>
-#include <sst/core/elementinfo.h>
 #include <sst/core/sst_types.h>
 #include <sst/core/event.h>
 #include <sst/core/component.h>
@@ -14,8 +12,10 @@
 #include <sst/core/interfaces/simpleMem.h>
 
 #include "cuda_runtime_api.h"
+#include "Gpgpusim_Event.h"
+#include <sst/core/output.h>
+#include "sst/core/elementinfo.h"
 #include <../ariel/ariel_shmem.h>
-#include <../ariel/arielevent.h>
 #include <cstring>
 #include <string>
 #include <fstream>
