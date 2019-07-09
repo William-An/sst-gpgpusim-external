@@ -22,5 +22,6 @@ libGpgpusim_la_LDFLAGS = \
 
 libGpgpusim_la_LIBADD = \
 	$(SST_SYSTEMC_LIB) \
+	-L. \
 	-lcudart_mod
 
