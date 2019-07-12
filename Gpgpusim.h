@@ -63,7 +63,7 @@ namespace SST {
                 void send_read_request_SST(unsigned core_id, uint64_t address, size_t size, void* mem_req);
                 void send_write_request_SST(unsigned core_id, uint64_t address, size_t size, void* mem_req);
                 void SST_callback_memcpy_H2D_done();
-				void SST_callback_memcpy_D2H_done();
+		void SST_callback_memcpy_D2H_done();
 
                 bool tick(SST::Cycle_t x);
                 cudaMemcpyKind memcpyKind;
@@ -90,12 +90,13 @@ namespace SST {
                         )
 
                     SST_ELI_DOCUMENT_PARAMS(
+                            {"verbose", "Verbosity for debugging. Increased numbers for increased verbosity.", "0"},
                             {"clock", "Internal Controller Clock Rate.", "1.0 Ghz"},
                             {"latency", "The time to be spent to service a memory request", "1000"},
                             {"num_nodes", "number of disaggregated nodes in the system", "1"},
                             {"num_cores", "Number of GPUs", "1"},
                             {"maxtranscore", "Maximum number of pending transactions", "16"},
-							{"maxcachetrans", "Maximum number of pending cache transactions", "512"},
+		            {"maxcachetrans", "Maximum number of pending cache transactions", "512"},
                             )
 
                     // Optional since there is nothing to document
@@ -105,7 +106,7 @@ namespace SST {
                     SST_ELI_DOCUMENT_PORTS(
                             {"requestLink%(num_cores)d", "Handle CUDA API calls", { "GpgpusimComponent.GpgpusimEvent", "" } },
                             {"requestMemLink%(num_cores)d", "Link to CPU memH (cache)", {} },
-							{"requestGPUCacheLink%(num_cores)d", "Link to GPU memH (cache)", {} }
+			    {"requestGPUCacheLink%(num_cores)d", "Link to GPU memH (cache)", {} }
                             )
 
                     // Optional since there is nothing to document
@@ -139,6 +140,8 @@ namespace SST {
                     uint32_t maxPendingCacheTrans;
                     std::unordered_map<SimpleMem::Request::id_t, struct cache_req_params>* gpuCachePendingTransactions;
                     uint32_t* numPendingCacheTransPerCore;
+
+                    Output* output;
         };
     }
 }
