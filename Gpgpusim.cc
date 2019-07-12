@@ -23,6 +23,9 @@ Gpgpusim::Gpgpusim(SST::ComponentId_t id, SST::Params& params): Component(id) {
     maxPendingTransCore = (uint32_t) params.find<uint32_t>("maxtranscore", 16);
     maxPendingCacheTrans = (uint32_t) params.find<uint32_t>("maxcachetrans", 512);
 
+    int verbosity = params.find<int>("verbose", 0);
+    output = new SST::Output("GpgpusimComponent[@f:@l:@p] ", verbosity, 0, SST::Output::STDOUT);
+
     //Ensure that GPGP-sim has the same as SST gpu cores
     SST_gpgpusim_numcores_equal_check(gpu_core_count);
 
@@ -99,7 +102,8 @@ bool Gpgpusim::tick(SST::Cycle_t x)
 void Gpgpusim::handleCPUReadRequest(size_t txSize, uint64_t pAddr){
     uint64_t addrOffset = physicalAddresses[0] % 64;
     SimpleMem::Request *req;
-    if(txSize + addrOffset <= 64){
+
+    if(txSize + addrOffset <= 64) {
         physicalAddresses[0] += txSize;
     }else {
         uint64_t leftAddr = currentAddress;
@@ -119,17 +123,16 @@ void Gpgpusim::handleCPUWriteRequest(size_t txSize, uint64_t pAddr){
 void Gpgpusim::cpuHandler( SST::Event* e ){
     GpgpusimEvent * temp_ptr =  dynamic_cast<GpgpusimComponent::GpgpusimEvent*> (e);
     if(temp_ptr->getType() == EventType::REQUEST){
-    printf("GPU received a request event: ");
+
+    output->verbose(CALL_INFO, 4, 0, "GPU received a request event: ");
     GpgpusimEvent * tse = new GpgpusimEvent(EventType::RESPONSE);
     switch(temp_ptr->API){
         case GPU_REG_FAT_BINARY:
-            tse->CA.register_fatbin.fat_cubin_handle = __cudaRegisterFatBinarySST(temp_ptr->CA.file_name);
-             std::cout << "Out of cudaRegisterFatBinarySST\n";
+             tse->CA.register_fatbin.fat_cubin_handle = __cudaRegisterFatBinarySST(temp_ptr->CA.file_name);
              tse->API = GPU_REG_FAT_BINARY_RET;
              break;
         case GPU_REG_FUNCTION:
-            __cudaRegisterFunctionSST(temp_ptr->CA.register_function.fat_cubin_handle, temp_ptr->CA.register_function.host_fun, temp_ptr->CA.register_function.device_fun);
-             std::cout << "Out of cudaRegisterFunctionSST\n";
+             __cudaRegisterFunctionSST(temp_ptr->CA.register_function.fat_cubin_handle, temp_ptr->CA.register_function.host_fun, temp_ptr->CA.register_function.device_fun);
              tse->API = GPU_REG_FUNCTION_RET;
              break;
         case GPU_MEMCPY:
@@ -152,7 +155,7 @@ void Gpgpusim::cpuHandler( SST::Event* e ){
                 dataAddress.resize(count);
                 transferNumber = 0;
                 if(kind == cudaMemcpyHostToDevice){
-                    printf("CUDA memcpy H2D from %p to %p of size %d\n", src, dst, count);
+		    output->verbose(CALL_INFO, 8, 0, "CUDA memcpy H2D from %" PRIu64 " to %" PRIu64 " of size %" PRIu32 "\n", src, dst, count);
                     baseAddress = dst;
                     currentAddress = dst;
                     while((pending_transactions_count < maxPendingTransCore) && (remainingTransfer > 0)){
@@ -160,7 +163,7 @@ void Gpgpusim::cpuHandler( SST::Event* e ){
                         addr_offset = physicalAddresses[0] % 64;
                         SimpleMem::Request *req;
                         if((addr_offset + current_transfer <= 64)){
-                            printf("CUDA GPU non-split read physical address %p of size%d\n", physicalAddresses[0], current_transfer);
+                            output->verbose(CALL_INFO, 4, 0, "CUDA GPU non-split read physical address %" PRIu64 " of size %" PRIu32 "\n", physicalAddresses[0], current_transfer);
                             req = new SimpleMem::Request(SimpleMem::Request::Read, physicalAddresses[0], current_transfer);
                             physicalAddresses[0] += current_transfer;
                         } else{
@@ -170,7 +173,7 @@ void Gpgpusim::cpuHandler( SST::Event* e ){
                             uint64_t physLeftAddr = physicalAddresses[0];
                             uint64_t physRightAddr = physLeftAddr += leftSize;
                             current_transfer = leftSize;
-                            printf("CUDA GPU split read physical address %p of size%d\n", physLeftAddr, current_transfer);
+                            output->verbose(CALL_INFO, 4, 0, "CUDA GPU split read physical address %" PRIu64 " of size %" PRIu32 "\n", physLeftAddr, current_transfer);
                             // Send one request, second request right address will be done next
                             physicalAddresses[0] = physRightAddr;
                             req = new SimpleMem::Request(SimpleMem::Request::Read, physLeftAddr, current_transfer);
@@ -180,14 +183,15 @@ void Gpgpusim::cpuHandler( SST::Event* e ){
                         remainingTransfer -= current_transfer;
                         currentAddress += current_transfer;
                         transferNumber += 1;
-                        printf("CUDA GPU remaining data transfer bytes %d\n", remainingTransfer);
+
+                        output->verbose(CALL_INFO, 4, 0, "CUDA GPU remaining data transfer bytes %" PRIu32 "\n", remainingTransfer);
 
                         pending_transactions_count++;
                         pendingTransactions->insert( std::pair<SimpleMem::Request::id_t, SimpleMem::Request*>(req->id, req) );
                         gpu_to_cpu_cache_links[0]->sendRequest(req);
                     }
                 } else if(kind == cudaMemcpyDeviceToHost){
-                    std::cout << "Within Device To Host" << std::endl;
+                    output->verbose(CALL_INFO, 4, 0, "Within Device To Host\n");
                     baseAddress = src;
                     currentAddress = src;
                     cudaMemcpy(&dataAddress[0], (void*)baseAddress, count, kind);
@@ -195,14 +199,13 @@ void Gpgpusim::cpuHandler( SST::Event* e ){
 
                 } if (kind == cudaMemcpyDeviceToDevice) {
                     is_stalled = false;
-                    std::cout << "Within Device To Device" << std::endl;
-                    printf("CUDA memcpy D2D from %p to %p of size %d\n", src, dst, count);
+                    output->verbose(CALL_INFO, 4, 0, "Within Device To Device\n");
+                    output->verbose(CALL_INFO, 4, 0, "CUDA memcpy D2D from %" PRIu64 " to %" PRIu64 " of size %" PRIu32 "\n", src, dst, count);
                     cudaMemcpy((void*)dst, (void*)src, count, kind);
                 } else {
                     // Other cudaMemcpy types TODO here
                 }
             }
-            std::cout << "Out of cudaMemcpySST\n";
             break;
         case GPU_CONFIG_CALL:
         {
@@ -215,7 +218,6 @@ void Gpgpusim::cpuHandler( SST::Event* e ){
             blockDim.y = temp_ptr->CA.cfg_call.bdy;
             blockDim.z = temp_ptr->CA.cfg_call.bdz;
             cudaConfigureCallSST(gridDim, blockDim, temp_ptr->CA.cfg_call.sharedMem, temp_ptr->CA.cfg_call.stream);
-            std::cout << "Out of cudaConfigureCall\n";
             tse->API = GPU_CONFIG_CALL_RET;
         }
             break;
@@ -223,14 +225,12 @@ void Gpgpusim::cpuHandler( SST::Event* e ){
         {
              cudaSetupArgumentSST(temp_ptr->CA.set_arg.address, temp_ptr->CA.set_arg.value, temp_ptr->CA.set_arg.size, temp_ptr->CA.set_arg.offset);
              tse->API = GPU_SET_ARG_RET;
-             std::cout << "Out of cudaSetupArgumentSST\n";
         }
             break;
         case GPU_LAUNCH:
-            printf("GPU KERNEL LAUNCHING\n");
+            output->verbose(CALL_INFO, 4, 0, "GPU KERNEL LAUNCHING\n");
             cudaLaunchSST(temp_ptr->CA.cuda_launch.func);
             tse->API = GPU_LAUNCH_RET;
-            std::cout << "Out of cudaLaunch\n";
             break;
         case GPU_FREE:
             cudaFree((void*)temp_ptr->CA.free_address);
@@ -241,7 +241,6 @@ void Gpgpusim::cpuHandler( SST::Event* e ){
             break;
         case GPU_MALLOC:
             tse->CA.cuda_malloc.ptr_address =  cudaMallocSST(temp_ptr->CA.cuda_malloc.dev_ptr, temp_ptr->CA.cuda_malloc.size);
-            std::cout << "Out of cudaMallocSST\n";
             tse->API = GPU_MALLOC_RET;
             break;
         case GPU_REG_VAR:
@@ -249,7 +248,6 @@ void Gpgpusim::cpuHandler( SST::Event* e ){
                     (char *)temp_ptr->CA.register_var.deviceName, (const char *)temp_ptr->CA.register_var.deviceName,
                     temp_ptr->CA.register_var.ext, temp_ptr->CA.register_var.size,
                     temp_ptr->CA.register_var.constant, temp_ptr->CA.register_var.global);
-            std::cout << "Out of cudaRegisterVar\n";
             tse->API = GPU_REG_VAR_RET;
             break;
         case GPU_MAX_BLOCK:
@@ -260,16 +258,16 @@ void Gpgpusim::cpuHandler( SST::Event* e ){
                     temp_ptr->CA.max_active_block.dynamicSMemSize,
                     temp_ptr->CA.max_active_block.flags
                     );
-            std::cout << "Out of cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlags\n";
             tse->API = GPU_MAX_BLOCK_RET;
             break;
         default:
             //TODO actually fail here
             break;
         }
+
         if(!is_stalled){
             gpu_to_core_links[0]->send(latency, tse);
-            printf("GPU sent a ACK\n");
+            output->verbose(CALL_INFO, 6, 0, "GPU sent a ACK\n");
         }
     }
 }
@@ -287,7 +285,7 @@ void Gpgpusim::gpuCacheHandler(SimpleMem::Request* event){
 		delete event;
 	}
 	else {
-		assert("\n Cannot find the request\n" &&  0);
+            assert("\n Cannot find the request\n" &&  0);
 	}
 }
 
@@ -298,26 +296,31 @@ void Gpgpusim::memoryHandler(SimpleMem::Request* event){
         int size = event->data.size();
         int index = event->getVirtualAddress() - baseAddress;
         ackTransfer += size;
-        printf("CUDA total GPU ACK %d of total %d\n", ackTransfer, totalTransfer);
+        
+        output->verbose(CALL_INFO, 4, 0, "CUDA total GPU ACK %" PRIu32 " of total %" PRIu32 "\n", ackTransfer, totalTransfer);
         // Finished receiving data for a CUDA memcpy operation
         if(ackTransfer == totalTransfer){
             GpgpusimEvent * tse = new GpgpusimEvent(EventType::RESPONSE);
             tse->API = GPU_MEMCPY_RET;
             if(memcpyKind == cudaMemcpyHostToDevice){
-                printf("Memcpy host to device\n");
+                output->verbose(CALL_INFO, 4, 0, "Memcpy host to device\n");
                 for(int i = 0; i < event->data.size(); i++){
                     dataAddress[index+i] = event->data[i];
                 }
-                printf("CUDA calling cudaMemcpySST on data: ");
-                for(int i = 0; i < dataAddress.size(); i++)
-                    printf("%d ", dataAddress[i]);
-                printf("\n");
+
+                output->verbose(CALL_INFO, 8, 0, "CUDA calling cudaMemcpySST on data: ");
+		if( static_cast<uint32_t>(output->getVerboseLevel()) >= 8) {
+                    for(int i = 0; i < dataAddress.size(); i++)
+                        printf("%d ", dataAddress[i]);
+                    printf("\n");
+                }
+
                 // Done with memcpy, call GPGPU-Sim
                 cudaMemcpySST(baseAddress, event->addr, totalTransfer, memcpyKind, &dataAddress[0]);
                 pending_transactions_count--;
-                 pendingTransactions->erase(pendingTransactions->find(mev_id));
+                pendingTransactions->erase(pendingTransactions->find(mev_id));
             }else if(memcpyKind == cudaMemcpyDeviceToHost){
-                printf("Memcpy device to host\n");
+                output->verbose(CALL_INFO, 4, 0, "Memcpy device to host\n");
                 tse->CA.cuda_memcpy.src = baseAddress;
                 tse->CA.cuda_memcpy.count = totalTransfer;
                 tse->CA.cuda_memcpy.kind = memcpyKind;
@@ -329,7 +332,7 @@ void Gpgpusim::memoryHandler(SimpleMem::Request* event){
                 gpu_to_core_links[0]->send(latency, tse);
             }
 
-            printf("CUDA GPU sent a ACK\n");
+            output->verbose(CALL_INFO, 4, 0, "CUDA GPU sent a ACK\n");
         } else {
             if(memcpyKind == cudaMemcpyHostToDevice){
                 // Copy data into local vector until we've received it all
@@ -347,7 +350,8 @@ void Gpgpusim::memoryHandler(SimpleMem::Request* event){
             size_t current_transfer;
             uint64_t addr_offset;
             SimpleMem::Request *req;
-            printf("CUDA total GPU remaining transfer is %d open transactions %d\n", remainingTransfer, pending_transactions_count);
+
+            output->verbose(CALL_INFO, 4, 0, "CUDA total GPU remaining transfer is %" PRIu32 " open transactions %" PRIu32 "\n", remainingTransfer, pending_transactions_count);
             if(memcpyKind == cudaMemcpyHostToDevice){
                 // Send reads while we still can
                 while((pending_transactions_count < maxPendingTransCore) && (remainingTransfer != 0)){
@@ -355,7 +359,7 @@ void Gpgpusim::memoryHandler(SimpleMem::Request* event){
                     addr_offset = physicalAddresses[0] % 64;
                     SimpleMem::Request *req;
                     if((addr_offset + current_transfer <= 64)){
-                        printf("CUDA GPU non-split read physical address %p of size %d\n", physicalAddresses[0], current_transfer);
+                        output->verbose(CALL_INFO, 4, 0, "CUDA GPU non-split read physical address %" PRIu64 " of size %" PRIu32 "\n", physicalAddresses[0], current_transfer);
                         req = new SimpleMem::Request(SimpleMem::Request::Read, physicalAddresses[0], current_transfer);
                         physicalAddresses[0] += current_transfer;
                     } else{
@@ -365,7 +369,8 @@ void Gpgpusim::memoryHandler(SimpleMem::Request* event){
                         uint64_t physLeftAddr = physicalAddresses[0];
                         uint64_t physRightAddr = physLeftAddr += leftSize;
                         current_transfer = leftSize;
-                        printf("CUDA GPU split read physical address %p of size %d\n", physLeftAddr, current_transfer);
+
+                        output->verbose(CALL_INFO, 4, 0, "CUDA GPU split read physical address %" PRIu64 " of size %" PRIu32 "\n", physLeftAddr, current_transfer);
                         // Send one request, second request right address will be done next
                         physicalAddresses[0] = physRightAddr;
                         req = new SimpleMem::Request(SimpleMem::Request::Read, physLeftAddr, current_transfer);
@@ -375,7 +380,7 @@ void Gpgpusim::memoryHandler(SimpleMem::Request* event){
                     req->setVirtualAddress(currentAddress);
                     remainingTransfer -= current_transfer;
                     currentAddress += current_transfer;
-                    printf("CUDA GPU remaining data transfer bytes %d\n", remainingTransfer);
+                    output->verbose(CALL_INFO, 4, 0, "CUDA GPU remaining data transfer bytes %" PRIu32 "\n", remainingTransfer);
 
                     // Send to memHierarchy
                     pending_transactions_count++;
@@ -390,7 +395,6 @@ void Gpgpusim::memoryHandler(SimpleMem::Request* event){
                     addr_offset = physicalAddresses[0] % 64;
                     SimpleMem::Request *req;
                     if((addr_offset + current_transfer <= 64)){
-                        printf("CUDA non-split physical address %p\n", physicalAddresses[0]);
                         req = new SimpleMem::Request(SimpleMem::Request::Write, physicalAddresses[0], current_transfer);
                         physicalAddresses[0] += current_transfer;
                     } else{
@@ -400,7 +404,6 @@ void Gpgpusim::memoryHandler(SimpleMem::Request* event){
                         uint64_t physLeftAddr = physicalAddresses[0];
                         uint64_t physRightAddr = physLeftAddr += leftSize;
                         current_transfer = leftSize;
-                        printf("CUDA split physical address %p %p\n", physLeftAddr, physRightAddr);
                         physicalAddresses[0] = physRightAddr;
                         req = new SimpleMem::Request(SimpleMem::Request::Read, physLeftAddr, current_transfer);
                     }
@@ -469,17 +472,21 @@ void Gpgpusim::SST_callback_memcpy_D2H_done()
 	uint64_t addr_offset;
 	size_t current_transfer = 0;
 	size_t count = totalTransfer;
-	printf("CUDA calculated result %p ", baseAddress);
-	for(int i = 0; i < count; i++)
-		printf("%d ", dataAddress[i]);
-	printf("\n");
+
+	output->verbose(CALL_INFO, 4, 0, "CUDA calculated result %" PRIu64 "", baseAddress);
+        if( static_cast<uint32_t>(output->getVerboseLevel()) >= 8) {
+	    for(int i = 0; i < count; i++)
+	    	printf("%d ", dataAddress[i]);
+            printf("\n");
+        }
+
 	while((pending_transactions_count < maxPendingTransCore) && (remainingTransfer != 0)){
 		index = currentAddress - baseAddress;
 		current_transfer = (remainingTransfer > 64) ? 64 : remainingTransfer;
 		addr_offset = physicalAddresses[0] % 64;
 		SimpleMem::Request *req;
 		if((addr_offset + current_transfer <= 64)){
-			printf("CUDA GPU non-split write physical address %p\n", physicalAddresses[0]);
+			output->verbose(CALL_INFO, 8, 0, "CUDA GPU non-split write physical address %p\n", physicalAddresses[0]);
 			req = new SimpleMem::Request(SimpleMem::Request::Write, physicalAddresses[0], current_transfer);
 			req->setVirtualAddress(currentAddress);
 			req->setPayload(&(dataAddress[index]), current_transfer);
@@ -491,7 +498,7 @@ void Gpgpusim::SST_callback_memcpy_D2H_done()
 			uint64_t physLeftAddr = physicalAddresses[0];
 			uint64_t physRightAddr = physLeftAddr += leftSize;
 			current_transfer = leftSize;
-			printf("CUDA GPU split write physical address %p %p\n", physLeftAddr, physRightAddr);
+			output->verbose(CALL_INFO, 8, 0, "CUDA GPU split write physical address %p %p\n", physLeftAddr, physRightAddr);
 			// Send one request, second request will be done next loop iteration
 			physicalAddresses[0] = physRightAddr;
 			req = new SimpleMem::Request(SimpleMem::Request::Write, physLeftAddr, current_transfer);
