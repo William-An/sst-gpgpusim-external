@@ -294,6 +294,9 @@ for next_group_id in range(config.hbmStacks):
 # Enable SST Statistics Outputs for this simulation
 sst.setStatisticLoadLevel(statLevel)
 sst.enableAllStatisticsForAllComponents({"type":"sst.AccumulatorStatistic"})
+sst.setStatisticOutput("sst.statOutputCSV", {"filepath" : statFile,
+                                                   "separator" : ", "
+                                            })
 
 print "Completed configuring the cuda-test model"
 
