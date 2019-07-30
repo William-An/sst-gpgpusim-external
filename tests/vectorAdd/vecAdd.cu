@@ -16,7 +16,7 @@ __global__ void vecAdd(int *a, int *b, int *c, int n)
 int main( int argc, char* argv[] )
 {
     // Size of vectors
-    int n = 524288;
+    int n = 131072;
  
     // Host input vectors
     int *h_a;
