@@ -8,7 +8,7 @@ from utils import *
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--config", help="specify configuration file", required=True)
 parser.add_argument("-v", "--verbose", help="increase verbosity of output", action="store_true")
-parser.add_argument("-s", "--statfile", help="statistics file", default="./stats.csv")
+parser.add_argument("-s", "--statfile", help="statistics file", default="./stats.out")
 parser.add_argument("-l", "--statlevel", help="statistics level", type=int, default=16)
 parser.add_argument("-x", "--binary", help="specify input binary", default="")
 parser.add_argument("-a", "--arguments", help="colon sep binary arguments", default="")
@@ -294,9 +294,7 @@ for next_group_id in range(config.hbmStacks):
 # Enable SST Statistics Outputs for this simulation
 sst.setStatisticLoadLevel(statLevel)
 sst.enableAllStatisticsForAllComponents({"type":"sst.AccumulatorStatistic"})
-sst.setStatisticOutput("sst.statOutputCSV", {"filepath" : statFile,
-                                                   "separator" : ", "
-                                            })
+sst.setStatisticOutput("sst.statOutputTXT", { "filepath" : statFile })
 
 print "Completed configuring the cuda-test model"
 
