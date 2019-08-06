@@ -32,11 +32,13 @@
 #include <zlib.h>
 #include <map>
 
+class memory_config;
 class memory_stats_t {
 public:
    memory_stats_t( unsigned n_shader, 
-                   const struct shader_core_config *shader_config, 
-                   const struct memory_config *mem_config );
+                   const class shader_core_config *shader_config, 
+                   const memory_config *mem_config,
+				   const class gpgpu_sim* gpu);
 
    unsigned memlatstat_done( class mem_fetch *mf );
    void memlatstat_read_done( class mem_fetch *mf );
@@ -47,10 +49,14 @@ public:
 
    void visualizer_print( gzFile visualizer_file );
 
+   // Reset local L2 stats that are aggregated each sampling window
+   void clear_L2_stats_pw();
+
    unsigned m_n_shader;
 
-   const struct shader_core_config *m_shader_config;
-   const struct memory_config *m_memory_config;
+   const shader_core_config *m_shader_config;
+   const memory_config *m_memory_config;
+   const class gpgpu_sim* m_gpu;
 
    unsigned max_mrq_latency;
    unsigned max_dq_latency;
@@ -84,6 +90,11 @@ public:
    
    unsigned ***mem_access_type_stats; // dram access type classification
 
+   // AerialVision L2 stats
+   unsigned L2_read_miss;
+   unsigned L2_write_miss;
+   unsigned L2_read_hit;
+   unsigned L2_write_hit;
 
    // L2 cache stats
    unsigned int *L2_cbtoL2length;

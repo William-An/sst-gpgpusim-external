@@ -33,6 +33,7 @@
 #include "../trace.h"
 #include "addrdec.h"
 #include "shader.h"
+#include "gpu-cache.h"
 #include <iostream>
 #include <fstream>
 #include <list>
@@ -62,12 +63,12 @@
 #define SAMPLELOG 222
 #define DUMPLOG 333
 
+class gpgpu_context;
 
+extern tr1_hash_map<new_addr_type,unsigned> address_random_interleaving;
 extern bool is_SST_buffer_full(unsigned core_id);
 extern void send_read_request_SST(unsigned core_id, uint64_t address, size_t size, void* mem_req);
 extern void send_write_request_SST(unsigned core_id, uint64_t address, size_t size, void* mem_req);
-
-
 
 enum dram_ctrl_t {
    DRAM_FIFO=0,
@@ -146,13 +147,14 @@ struct power_config {
 };
 
 
-
-struct memory_config {
-   memory_config()
+class memory_config {
+    public:
+   memory_config(gpgpu_context* ctx)
    {
        m_valid = false;
        gpgpu_dram_timing_opt=NULL;
        gpgpu_L2_queue_config=NULL;
+       gpgpu_ctx = ctx;
    }
    void init()
    {
@@ -294,18 +296,18 @@ struct memory_config {
    unsigned write_high_watermark;
    unsigned write_low_watermark;
    bool m_perf_sim_memcpy;
-
    bool SST_mode;
+   gpgpu_context* gpgpu_ctx;
 };
 
-// global counters and flags (please try not to add to this list!!!)
-extern unsigned long long  gpu_sim_cycle;
-extern unsigned long long  gpu_tot_sim_cycle;
 extern bool g_interactive_debugger_enabled;
 
 class gpgpu_sim_config : public power_config, public gpgpu_functional_sim_config {
 public:
-    gpgpu_sim_config() { m_valid = false; }
+    gpgpu_sim_config(gpgpu_context* ctx): m_shader_config(ctx), m_memory_config(ctx) {
+	m_valid = false;
+	gpgpu_ctx = ctx;
+    }
     void reg_options(class OptionParser * opp);
     void init() 
     {
@@ -343,10 +345,17 @@ public:
     bool is_SST_mode() const { return m_memory_config.SST_mode; }
     unsigned checkpoint_option;
 
+    size_t stack_limit() const {return stack_size_limit; }
+    size_t heap_limit() const {return heap_size_limit; }
+    size_t sync_depth_limit() const {return runtime_sync_depth_limit; }
+    size_t pending_launch_count_limit() const {return runtime_pending_launch_count_limit;}
+
 private:
     void init_clock_domains(void ); 
 
 
+    // backward pointer
+    class gpgpu_context* gpgpu_ctx;
     bool m_valid;
     shader_core_config m_shader_config;
     memory_config m_memory_config;
@@ -383,6 +392,15 @@ private:
     int gpu_stat_sample_freq;
     int gpu_runtime_stat_flag;
 
+    // Device Limits
+    size_t stack_size_limit;
+    size_t heap_size_limit;
+    size_t runtime_sync_depth_limit;
+    size_t runtime_pending_launch_count_limit;	
+
+ //gpu compute capability options
+    unsigned int gpgpu_compute_capability_major;
+    unsigned int gpgpu_compute_capability_minor;
     unsigned long long liveness_message_freq; 
 
     friend class gpgpu_sim;
@@ -413,10 +431,31 @@ struct occupancy_stats {
     }
 };
 
+class gpgpu_context;
+class ptx_instruction;
+
+class watchpoint_event {
+public:
+   watchpoint_event()
+   {
+      m_thread=NULL;
+      m_inst=NULL;
+   }
+   watchpoint_event(const ptx_thread_info *thd, const ptx_instruction *pI)
+   {
+      m_thread=thd;
+      m_inst = pI;
+   }
+   const ptx_thread_info *thread() const { return m_thread; }
+   const ptx_instruction *inst() const { return m_inst; }
+private:
+   const ptx_thread_info *m_thread;
+   const ptx_instruction *m_inst;
+};
 
 class gpgpu_sim : public gpgpu_t {
 public:
-   gpgpu_sim( const gpgpu_sim_config &config );
+   gpgpu_sim( const gpgpu_sim_config &config, gpgpu_context* ctx );
 
    void set_prop( struct cudaDeviceProp *prop );
 
@@ -444,6 +483,8 @@ public:
 
    int shared_mem_size() const;
    int shared_mem_per_block() const;
+   int compute_capability_major() const;
+   int compute_capability_minor() const;
    int num_registers_per_core() const;
    int num_registers_per_block() const;
    int wrp_size() const;
@@ -471,14 +512,14 @@ public:
    /*!
     * Returning the configuration of the shader core, used by the functional simulation only so far
     */
-   const struct shader_core_config * getShaderCoreConfig();
+   const shader_core_config * getShaderCoreConfig();
    
    
    //! Get shader core Memory Configuration
     /*!
     * Returning the memory configuration of the shader core, used by the functional simulation only so far
     */
-   const struct memory_config * getMemoryConfig();
+   const memory_config * getMemoryConfig();
    
    
    //! Get shader core SIMT cluster
@@ -487,8 +528,12 @@ public:
     */
     simt_core_cluster * getSIMTCluster();
 
+    void hit_watchpoint( unsigned watchpoint_num, ptx_thread_info *thd, const ptx_instruction *pI );
+
     bool is_SST_mode() {return m_config.is_SST_mode(); }
 
+    // backward pointer
+    class gpgpu_context* gpgpu_ctx;
 
 private:
    // clocks
@@ -535,8 +580,8 @@ private:
    const gpgpu_sim_config &m_config;
   
    const struct cudaDeviceProp     *m_cuda_properties;
-   const struct shader_core_config *m_shader_config;
-   const struct memory_config      *m_memory_config;
+   const shader_core_config *m_shader_config;
+   const memory_config      *m_memory_config;
 
    // stats
    class shader_core_stats  *m_shader_stats;
@@ -551,6 +596,8 @@ private:
 
    std::vector<std::string> m_executed_kernel_names; //< names of kernel for stat printout 
    std::vector<unsigned> m_executed_kernel_uids; //< uids of kernel launches for stat printout
+   std::map<unsigned,watchpoint_event> g_watchpoint_hits;
+
    std::string executed_kernel_info_string(); //< format the kernel information into a string for stat printout
    void clear_executed_kernel_info(); //< clear the kernel information after stat printout
 
@@ -561,6 +608,18 @@ public:
    unsigned gpu_sim_insn_last_update_sid;
    occupancy_stats gpu_occupancy;
    occupancy_stats gpu_tot_occupancy;
+
+   // performance counter for stalls due to congestion.
+   unsigned int gpu_stall_dramfull;
+   unsigned int gpu_stall_icnt2sh;
+   unsigned long long partiton_reqs_in_parallel;
+   unsigned long long partiton_reqs_in_parallel_total;
+   unsigned long long partiton_reqs_in_parallel_util;
+   unsigned long long partiton_reqs_in_parallel_util_total;
+   unsigned long long  gpu_sim_cycle_parition_util;
+   unsigned long long  gpu_tot_sim_cycle_parition_util;
+   unsigned long long partiton_replys_in_parallel;
+   unsigned long long partiton_replys_in_parallel_total;
 
 
    FuncCache get_cache_config(std::string kernel_name);

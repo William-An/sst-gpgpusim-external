@@ -42,12 +42,12 @@ public:
     {
         m_memory_config = config;
     }
-    virtual mem_fetch * alloc(const class warp_inst_t &inst, const mem_access_t &access) const 
+    virtual mem_fetch * alloc(const class warp_inst_t &inst, const mem_access_t &access, unsigned long long cycle) const
     {
         abort();
         return NULL;
     }
-    virtual mem_fetch * alloc(new_addr_type addr, mem_access_type type, unsigned size, bool wr) const;
+    virtual mem_fetch * alloc(new_addr_type addr, mem_access_type type, unsigned size, bool wr, unsigned long long cycle) const;
 private:
     const memory_config *m_memory_config;
 };
@@ -58,7 +58,7 @@ private:
 class memory_partition_unit
 {
 public: 
-   memory_partition_unit( unsigned partition_id, const struct memory_config *config, class memory_stats_t *stats );
+   memory_partition_unit( unsigned partition_id, const memory_config *config, class memory_stats_t *stats, class gpgpu_sim* gpu );
    ~memory_partition_unit(); 
 
    bool busy() const;
@@ -93,10 +93,12 @@ public:
 
    unsigned get_mpid() const { return m_id; }
 
+   class gpgpu_sim* get_mgpu() const { return m_gpu; }
+
 private: 
 
    unsigned m_id;
-   const struct memory_config *m_config;
+   const memory_config *m_config;
    class memory_stats_t *m_stats;
    class memory_sub_partition **m_sub_partition; 
    class dram_t *m_dram;
@@ -104,7 +106,7 @@ private:
    class arbitration_metadata
    {
    public: 
-      arbitration_metadata(const struct memory_config *config); 
+      arbitration_metadata(const memory_config *config);
 
       // check if a subpartition still has credit 
       bool has_credits(int inner_sub_partition_id) const; 
@@ -128,7 +130,7 @@ private:
       std::vector<int> m_private_credit; 
       int m_shared_credit; 
    }; 
-   arbitration_metadata m_arbitration_metadata; 
+   arbitration_metadata m_arbitration_metadata;
 
    // determine wheither a given subpartition can issue to DRAM 
    bool can_issue_to_dram(int inner_sub_partition_id); 
@@ -140,12 +142,14 @@ private:
       class mem_fetch* req;
    };
    std::list<dram_delay_t> m_dram_latency_queue;
+
+   class gpgpu_sim* m_gpu;
 };
 
 class memory_sub_partition
 {
 public:
-   memory_sub_partition( unsigned sub_partition_id, const struct memory_config *config, class memory_stats_t *stats );
+   memory_sub_partition( unsigned sub_partition_id, const memory_config *config, class memory_stats_t *stats, class gpgpu_sim* gpu );
    ~memory_sub_partition(); 
 
    unsigned get_id() const { return m_id; } 
@@ -180,6 +184,10 @@ public:
    void accumulate_L2cache_stats(class cache_stats &l2_stats) const;
    void get_L2cache_sub_stats(struct cache_sub_stats &css) const;
 
+   // Support for getting per-window L2 stats for AerialVision
+   void get_L2cache_sub_stats_pw(struct cache_sub_stats_pw &css) const;
+   void clear_L2cache_stats_pw();
+
    void force_l2_tag_update(new_addr_type addr, unsigned time, mem_access_sector_mask_t mask)
    {
         m_L2cache->force_tag_access( addr, m_memcpy_cycle_offset + time, mask );
@@ -189,9 +197,10 @@ public:
 private:
 // data
    unsigned m_id;  //< the global sub partition ID
-   const struct memory_config *m_config;
+   const memory_config *m_config;
    class l2_cache *m_L2cache;
    class L2interface *m_L2interface;
+   class gpgpu_sim* m_gpu;
    partition_mf_allocator *m_mf_allocator;
 
    // model delay of ROP units with a fixed latency

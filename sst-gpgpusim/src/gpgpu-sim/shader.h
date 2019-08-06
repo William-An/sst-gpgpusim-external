@@ -55,7 +55,6 @@
 #include "traffic_breakdown.h"
 
 
-
 #define NO_OP_FLAG            0xFF
 
 /* READ_PACKET_SIZE:
@@ -69,6 +68,8 @@
 #define WRITE_PACKET_SIZE 8
 
 #define WRITE_MASK_SIZE 8
+
+class gpgpu_context;
 
 enum exec_unit_type_t
 {
@@ -295,7 +296,7 @@ typedef std::bitset<WARP_PER_CTA_MAX> warp_set_t;
 int register_bank(int regnum, int wid, unsigned num_banks, unsigned bank_warp_shift, bool sub_core_model, unsigned banks_per_sched, unsigned sched_id );
 
 class shader_core_ctx;
-struct shader_core_config;
+class shader_core_config;
 class shader_core_stats;
 
 enum scheduler_prioritization_type
@@ -1033,7 +1034,7 @@ struct ifetch_buffer_t {
     unsigned m_warp_id;
 };
 
-struct shader_core_config;
+class shader_core_config;
 
 class simd_function_unit {
 public:
@@ -1072,16 +1073,8 @@ public:
     //modifiers
     virtual void cycle();
     virtual void issue( register_set& source_reg );
-    virtual unsigned get_active_lanes_in_pipeline()
-    {
-    	active_mask_t active_lanes;
-    	active_lanes.reset();
-        for( unsigned stage=0; (stage+1)<m_pipeline_depth; stage++ ){
-        	if( !m_pipeline_reg[stage]->empty() )
-        		active_lanes|=m_pipeline_reg[stage]->get_active_mask();
-        }
-        return active_lanes.count();
-    }
+    virtual unsigned get_active_lanes_in_pipeline();
+
     virtual void active_lanes_in_pipeline() = 0;
 /*
     virtual void issue( register_set& source_reg )
@@ -1112,6 +1105,9 @@ protected:
     warp_inst_t **m_pipeline_reg;
     register_set *m_result_port;
     class shader_core_ctx *m_core;
+
+    unsigned active_insts_in_pipeline;
+
 };
 
 class sfu : public pipelined_simd_unit
@@ -1368,10 +1364,12 @@ const char* const pipeline_stage_name_decode[] = {
     "N_PIPELINE_STAGES" 
 };
 
-struct shader_core_config : public core_config
+class shader_core_config : public core_config
 {
-    shader_core_config(){
+    public:
+    shader_core_config(gpgpu_context* ctx):core_config(ctx){
 	pipeline_widths_string = NULL;
+	gpgpu_ctx = ctx;
     }
 
     void init()
@@ -1412,10 +1410,8 @@ struct shader_core_config : public core_config
         }
         max_warps_per_shader =  n_thread_per_shader/warp_size;
         assert( !(n_thread_per_shader % warp_size) );
-        max_sfu_latency = 512;
-        max_sp_latency = 32;
-        
-	max_tensor_core_latency = 64;
+
+        set_pipeline_latency();
         
 	m_L1I_config.init(m_L1I_config.m_config_string,FuncCachePreferNone);
         m_L1T_config.init(m_L1T_config.m_config_string,FuncCachePreferNone);
@@ -1431,7 +1427,10 @@ struct shader_core_config : public core_config
     unsigned sid_to_cluster( unsigned sid ) const { return sid / n_simt_cores_per_cluster; }
     unsigned sid_to_cid( unsigned sid )     const { return sid % n_simt_cores_per_cluster; }
     unsigned cid_to_sid( unsigned cid, unsigned cluster_id ) const { return cluster_id*n_simt_cores_per_cluster + cid; }
+    void set_pipeline_latency();
 
+    // backward pointer
+    class gpgpu_context* gpgpu_ctx;
 // data
     char *gpgpu_shader_core_pipeline_opt;
     bool gpgpu_perfect_mem;
@@ -1505,7 +1504,9 @@ struct shader_core_config : public core_config
     bool sub_core_model;
     
     unsigned max_sp_latency;
+    unsigned max_int_latency;
     unsigned max_sfu_latency;
+    unsigned max_dp_latency;
     unsigned max_tensor_core_latency;
     
     unsigned n_simt_cores_per_cluster;
@@ -1523,6 +1524,7 @@ struct shader_core_config : public core_config
     bool gpgpu_concurrent_kernel_sm;
 
     bool adpative_volta_cache_config;
+
 };
 
 struct shader_core_stats_pod {
@@ -1725,6 +1727,7 @@ private:
     friend class LooseRoundRobbinScheduler;
 };
 
+class memory_config;
 class shader_core_mem_fetch_allocator : public mem_fetch_allocator {
 public:
     shader_core_mem_fetch_allocator( unsigned core_id, unsigned cluster_id, const memory_config *config )
@@ -1733,20 +1736,8 @@ public:
     	m_cluster_id = cluster_id;
     	m_memory_config = config;
     }
-    mem_fetch *alloc( new_addr_type addr, mem_access_type type, unsigned size, bool wr ) const 
-    {
-    	mem_access_t access( type, addr, size, wr );
-    	mem_fetch *mf = new mem_fetch( access, 
-    				       NULL,
-    				       wr?WRITE_PACKET_SIZE:READ_PACKET_SIZE, 
-    				       -1, 
-    				       m_core_id, 
-    				       m_cluster_id,
-    				       m_memory_config );
-    	return mf;
-    }
-    
-    mem_fetch *alloc( const warp_inst_t &inst, const mem_access_t &access ) const
+    mem_fetch *alloc( new_addr_type addr, mem_access_type type, unsigned size, bool wr, unsigned long long cycle ) const; 
+    mem_fetch *alloc( const warp_inst_t &inst, const mem_access_t &access, unsigned long long cycle ) const
     {
         warp_inst_t inst_copy = inst;
         mem_fetch *mf = new mem_fetch(access, 
@@ -1755,7 +1746,8 @@ public:
                                       inst.warp_id(),
                                       m_core_id, 
                                       m_cluster_id, 
-                                      m_memory_config);
+                                      m_memory_config,
+									  cycle);
         return mf;
     }
 
@@ -1772,8 +1764,8 @@ public:
                      class simt_core_cluster *cluster,
                      unsigned shader_id,
                      unsigned tpc_id,
-                     const struct shader_core_config *config,
-                     const struct memory_config *mem_config,
+                     const shader_core_config *config,
+                     const memory_config *mem_config,
                      shader_core_stats *stats );
 
 // used by simt_core_cluster:
@@ -2068,8 +2060,8 @@ class simt_core_cluster {
 public:
     simt_core_cluster( class gpgpu_sim *gpu, 
                        unsigned cluster_id, 
-                       const struct shader_core_config *config, 
-                       const struct memory_config *mem_config,
+                       const shader_core_config *config, 
+                       const memory_config *mem_config,
                        shader_core_stats *stats,
                        memory_stats_t *mstats );
 
