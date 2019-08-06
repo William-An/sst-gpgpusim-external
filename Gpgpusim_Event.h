@@ -52,10 +52,10 @@ namespace SST{ namespace GpgpusimComponent{
                     char file_name[256];
                     uint64_t free_address;
                     struct {
-                        unsigned fat_cubin_handle;
+                        uint64_t fat_cubin_handle;
                     } register_fatbin;
                     struct {
-                        unsigned fat_cubin_handle;
+                        uint64_t fat_cubin_handle;
                         uint64_t host_fun;
                         char device_fun[512];
                     } register_function;
@@ -90,7 +90,7 @@ namespace SST{ namespace GpgpusimComponent{
                         uint64_t func;
                     } cuda_launch;
                     struct {
-                        unsigned fatCubinHandle;
+                        uint64_t fatCubinHandle;
                         uint64_t hostVar; //pointer to...something
                         char deviceName[256]; //name of variable
                         int ext;
