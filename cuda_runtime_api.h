@@ -9,13 +9,13 @@
 
 extern "C"{
 
-uint64_t cudaMallocSST(void **devPtr, size_t size); 
+uint64_t cudaMallocSST(void **devPtr, size_t size);
 
 unsigned CUDARTAPI __cudaRegisterFatBinarySST(char file_name[256]);
 
 void CUDARTAPI __cudaRegisterFunctionSST(
-    unsigned fatCubinHandle, 
-    uint64_t hostFun, 
+    uint64_t fatCubinHandle,
+    uint64_t hostFun,
     char deviceFun[256]
 );
 

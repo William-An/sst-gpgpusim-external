@@ -1,20 +1,17 @@
-// Copyright 2009-2017 Sandia Corporation. Under the terms
-// of Contract DE-NA0003525 with Sandia Corporation, the U.S.
+// Copyright 2009-2019 NTESS. Under the terms
+// of Contract DE-NA0003525 with NTESS, the U.S.
 // Government retains certain rights in this software.
 //
-// Copyright (c) 2009-2017, Sandia Corporation
+// Copyright (c) 2009-2019, NTESS
 // All rights reserved.
+//
+// Portions are copyright of other developers:
+// See the file CONTRIBUTORS.TXT in the top level directory
+// the distribution for more information.
 //
 // This file is part of the SST software package. For license
 // information, see the LICENSE file in the top level directory of the
 // distribution.
-//
-
-
-//
-/* Author: Amro Awad
- * E-mail: aawad@sandia.gov
- */
 
 #ifndef _H_SST_GPU_EVENT
 #define _H_SST_GPU_EVENT
@@ -30,7 +27,7 @@
 #include<string>
 
 
-using namespace SST; 
+using namespace SST;
 
 
 namespace SST{ namespace GpgpusimComponent{
@@ -55,10 +52,10 @@ namespace SST{ namespace GpgpusimComponent{
                     char file_name[256];
                     uint64_t free_address;
                     struct {
-                        unsigned fat_cubin_handle;
+                        uint64_t fat_cubin_handle;
                     } register_fatbin;
                     struct {
-                        unsigned fat_cubin_handle;
+                        uint64_t fat_cubin_handle;
                         uint64_t host_fun;
                         char device_fun[512];
                     } register_function;
@@ -93,13 +90,13 @@ namespace SST{ namespace GpgpusimComponent{
                         uint64_t func;
                     } cuda_launch;
                     struct {
-                        unsigned fatCubinHandle;
+                        uint64_t fatCubinHandle;
                         uint64_t hostVar; //pointer to...something
                         char deviceName[256]; //name of variable
                         int ext;
                         int size;
                         int constant;
-                        int global; 
+                        int global;
                     } register_var;
                     struct {
                         int numBlock;
@@ -116,7 +113,7 @@ namespace SST{ namespace GpgpusimComponent{
 
             void setType(int ev1) { ev = static_cast<EventType>(ev1);}
             int getType() { return ev; }
-            
+
             int hint;
             int fileID;
             void setResp(long long int add, long long int padd, int sz) { address = add; paddress = padd; size = sz;}
