@@ -1,21 +1,38 @@
+// Copyright 2009-2019 NTESS. Under the terms
+// of Contract DE-NA0003525 with NTESS, the U.S.
+// Government retains certain rights in this software.
+//
+// Copyright (c) 2009-2019, NTESS
+// All rights reserved.
+//
+// Portions are copyright of other developers:
+// See the file CONTRIBUTORS.TXT in the top level directory
+// the distribution for more information.
+//
+// This file is part of the SST software package. For license
+// information, see the LICENSE file in the top level directory of the
+// distribution.
 
+// SST includes
+#include <sst/core/sst_types.h>
+#include <sst/core/link.h>
+#include <sst/core/event.h>
+#include <sst/core/output.h>
+#include <sst/core/timeConverter.h>
+#include <sst/core/interfaces/simpleMem.h>
+#include <sst/core/component.h>
+#include <sst/core/elementinfo.h>
+#include <../ariel/ariel_shmem.h>
+
+// Other Includes
+#include "mempool.h"
 #include "host_defines.h"
 #include "builtin_types.h"
 #include "driver_types.h"
 #include "cuda_runtime_api.h"
-
-#include <sst/core/sst_types.h>
-#include <sst/core/event.h>
-#include <sst/core/component.h>
-#include <sst/core/link.h>
-#include <sst/core/timeConverter.h>
-#include <sst/core/interfaces/simpleMem.h>
-
-#include "cuda_runtime_api.h"
 #include "Gpgpusim_Event.h"
-#include <sst/core/output.h>
-#include "sst/core/elementinfo.h"
-#include <../ariel/ariel_shmem.h>
+
+
 #include <cstring>
 #include <string>
 #include <fstream>
@@ -25,14 +42,12 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <poll.h>
-#include "mempool.h"
+
 
 using namespace std;
 using namespace SST;
 using namespace SST::Interfaces;
 using namespace SST::GpgpusimComponent;
-
-
 
 namespace SST {
     namespace GpgpusimComponent {
