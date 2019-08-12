@@ -194,9 +194,6 @@ bool SST_Cycle()
 
 	if(g_stream_manager()->operation(&sst_sim_cycles) && !g_the_gpu()->active()) {
 		if(sst_sim_cycles) {
-			g_the_gpu()->print_stats();
-			g_the_gpu()->update_stats();
-			print_simulation_time();
 			sst_sim_cycles = false;
 		}
 		return false;
@@ -225,6 +222,12 @@ bool SST_Cycle()
 			GPGPUsim_ctx_ptr()->g_sim_active = false;
 			GPGPUsim_ctx_ptr()->break_limit = true;
 		}
+	}
+
+	if(!g_the_gpu()->active()){
+		g_the_gpu()->print_stats();
+		g_the_gpu()->update_stats();
+		print_simulation_time();
 	}
 
     if(GPGPUsim_ctx_ptr()->break_limit) {

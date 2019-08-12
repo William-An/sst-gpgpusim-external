@@ -593,6 +593,12 @@ void shader_core_stats::print( FILE* fout ) const
            gpu_stall_shd_mem_breakdown[L_MEM_LD][DATA_PORT_STALL] + 
            gpu_stall_shd_mem_breakdown[L_MEM_ST][DATA_PORT_STALL]    
            ); // data port stall at data cache 
+   fprintf(fout, "gpgpu_stall_shd_mem[gl_mem][ICNT_RC_FAIL] = %d\n",
+           gpu_stall_shd_mem_breakdown[G_MEM_LD][ICNT_RC_FAIL] +
+           gpu_stall_shd_mem_breakdown[G_MEM_ST][ICNT_RC_FAIL] +
+           gpu_stall_shd_mem_breakdown[L_MEM_LD][ICNT_RC_FAIL] +
+           gpu_stall_shd_mem_breakdown[L_MEM_ST][ICNT_RC_FAIL]
+           );
    //fprintf(fout, "gpgpu_stall_shd_mem[g_mem_ld][mshr_rc] = %d\n", gpu_stall_shd_mem_breakdown[G_MEM_LD][MSHR_RC_FAIL]);
    //fprintf(fout, "gpgpu_stall_shd_mem[g_mem_ld][icnt_rc] = %d\n", gpu_stall_shd_mem_breakdown[G_MEM_LD][ICNT_RC_FAIL]);
    //fprintf(fout, "gpgpu_stall_shd_mem[g_mem_ld][wb_icnt_rc] = %d\n", gpu_stall_shd_mem_breakdown[G_MEM_LD][WB_ICNT_RC_FAIL]);
