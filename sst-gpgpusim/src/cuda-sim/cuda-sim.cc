@@ -2069,16 +2069,8 @@ void cuda_sim::read_sim_environment_variables()
 
 #if CUDART_VERSION > 1010
     g_override_embedded_ptx = false;
-
-    char *usefile;
-    if ( getenv("PTX_SIM_USE_PTX_FILE") == NULL ) {
-        usefile = "1.ptx";
-    }
-    else {
-        usefile = getenv("PTX_SIM_USE_PTX_FILE");
-    }    
-
-    if (usefile != "0" ) {
+    char *usefile = getenv("PTX_SIM_USE_PTX_FILE");
+    if (usefile && strlen(usefile)) {
         printf("GPGPU-Sim PTX: overriding embedded ptx with ptx file (PTX_SIM_USE_PTX_FILE is set)\n");
         fflush(stdout);
         g_override_embedded_ptx = true;
