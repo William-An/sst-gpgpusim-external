@@ -433,9 +433,15 @@ void _cl_program::Build(const char *options)
       pgm_info &info=i->second;
       sg_info = &info;
       unsigned source_num=i->first;
-      char ptx_fname[1024];
-      char *use_extracted_ptx = getenv("PTX_SIM_USE_PTX_FILE");
-      if( use_extracted_ptx == NULL ) {
+      char ptx_fname[1024];     
+      char *use_extracted_ptx;
+      if ( getenv("PTX_SIM_USE_PTX_FILE") == NULL ) {
+         use_extracted_ptx = "1.ptx";
+      }
+      else {
+         use_extracted_ptx = getenv("PTX_SIM_USE_PTX_FILE");
+      }       
+      if( use_extracted_ptx == "0" ) {
          char *nvopencl_libdir = getenv("NVOPENCL_LIBDIR");
          const std::string gpgpu_opencl_path_str = std::string(getenv("GPGPUSIM_ROOT"))
             + "/build/" + std::string(getenv("GPGPUSIM_CONFIG"));

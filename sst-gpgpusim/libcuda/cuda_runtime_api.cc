@@ -2614,7 +2614,13 @@ void cuda_runtime_api::extract_code_using_cuobjdump(const char *fn){
     unsigned forced_max_capability = context->get_device()->get_gpgpu()->get_config().get_forced_max_capability();
 
     //prevent the dumping by cuobjdump everytime we execute the code!
-    const char *override_cuobjdump = getenv("CUOBJDUMP_SIM_FILE"); 
+    char *override_cuobjdump;
+    if ( getenv("CUOBJDUMP_SIM_FILE") == NULL ) {
+        override_cuobjdump = "jj";
+    }
+    else {
+        override_cuobjdump = getenv("CUOBJDUMP_SIM_FILE");
+    }     
     char command[1000], ptx_file[1000];
     std::string app_binary = get_app_binary(fn); 
     //Running cuobjdump using dynamic link to current process
@@ -2636,7 +2642,7 @@ void cuda_runtime_api::extract_code_using_cuobjdump(const char *fn){
     //TODO: redundant to dump twice. how can it be prevented?
     //dump only for specific arch
     char fname[1024];
-    if ((override_cuobjdump == NULL) || (strlen(override_cuobjdump)==0)) {
+    if ((override_cuobjdump == "0")) {
 	snprintf(fname,1024,"_cuobjdump_complete_output_XXXXXX");
 	int fd=mkstemp(fname);
 	close(fd);
@@ -2971,8 +2977,14 @@ cuobjdumpPTXSection* cuda_runtime_api::findPTXSection(const std::string identifi
 void cuda_runtime_api::cuobjdumpInit(const char *fn){
 	CUctx_st *context = GPGPUSim_Context();
 	extract_code_using_cuobjdump(fn); //extract all the output of cuobjdump to _cuobjdump_*.*
-	const char* pre_load = getenv("CUOBJDUMP_SIM_FILE");
-	if (pre_load ==NULL || strlen(pre_load)==0){
+      char *pre_load;
+      if ( getenv("CUOBJDUMP_SIM_FILE") == NULL ) {
+         pre_load = "jj";
+      }
+      else {
+         pre_load = getenv("CUOBJDUMP_SIM_FILE");
+      }      
+	if (pre_load == "0") {
 		cuobjdumpSectionList = pruneSectionList(context);
 		cuobjdumpSectionList = mergeSections();
 	}
@@ -3031,12 +3043,26 @@ void gpgpu_context::cuobjdumpParseBinary(unsigned int handle){
 	if (max_capability == 0) max_capability=context->get_device()->get_gpgpu()->get_config().get_forced_max_capability();
 
 	cuobjdumpPTXSection* ptx = NULL;
-	const char* pre_load = getenv("CUOBJDUMP_SIM_FILE");
-	if(pre_load==NULL || strlen(pre_load)==0)
+      char *pre_load;
+      if ( getenv("CUOBJDUMP_SIM_FILE") == NULL ) {
+         pre_load = "jj";
+      }
+      else {
+         pre_load = getenv("CUOBJDUMP_SIM_FILE");
+      }   
+	if(pre_load == "0")
 		ptx = api->findPTXSection(fname);
 	char *ptxcode;
-	const char *override_ptx_name = getenv("PTX_SIM_KERNELFILE"); 
-	if (override_ptx_name == NULL or getenv("PTX_SIM_USE_PTX_FILE") == NULL or strlen(getenv("PTX_SIM_USE_PTX_FILE"))==0) {
+
+      const char *override_ptx_name;
+	if ( getenv("PTX_SIM_KERNELFILE") == NULL ) {
+		override_ptx_name = "_1.ptx";
+	}
+	else {
+		override_ptx_name = getenv("PTX_SIM_KERNELFILE");
+	}      
+
+	if (override_ptx_name == "0" or getenv("PTX_SIM_USE_PTX_FILE") == "0") {
 		ptxcode = readfile(ptx->getPTXfilename());
 	} else {
 		printf("GPGPU-Sim PTX: overriding embedded ptx with '%s' (PTX_SIM_USE_PTX_FILE is set)\n", override_ptx_name);
