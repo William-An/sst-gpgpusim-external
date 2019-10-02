@@ -29,7 +29,7 @@
 #include "builtin_types.h"
 #include "driver_types.h"
 #include "cuda_runtime_api.h"
-#include "Gpgpusim_Event.h"
+#include "balar_event.h"
 
 
 #include <cstring>
@@ -46,13 +46,13 @@
 using namespace std;
 using namespace SST;
 using namespace SST::Interfaces;
-using namespace SST::GpgpusimComponent;
+using namespace SST::BalarComponent;
 
 namespace SST {
-namespace GpgpusimComponent {
-class Gpgpusim : public SST::Component {
+namespace BalarComponent {
+class Balar : public SST::Component {
 public:
-   Gpgpusim( SST::ComponentId_t id, SST::Params& params);
+   Balar( SST::ComponentId_t id, SST::Params& params);
    void setup()  {};
    void finish() {};
 
@@ -93,13 +93,13 @@ public:
    uint32_t pending_transactions_count = 0;
    uint32_t maxPendingTransCore;
 
-   ~Gpgpusim() { };
+   ~Balar() { };
    SST_ELI_REGISTER_COMPONENT(
-      Gpgpusim,
-      "Gpgpusim",
-      "Gpgpusim",
+      Balar,
+      "balar",
+      "balar",
       SST_ELI_ELEMENT_VERSION(3,2,0),
-      "GPGPU simulator",
+      "GPGPU simulator based on GPGPU-Sim",
       COMPONENT_CATEGORY_PROCESSOR
    )
 
@@ -118,7 +118,7 @@ public:
    )
 
    SST_ELI_DOCUMENT_PORTS(
-      {"requestLink%(num_cores)d", "Handle CUDA API calls", { "GpgpusimComponent.GpgpusimEvent", "" } },
+      {"requestLink%(num_cores)d", "Handle CUDA API calls", { "BalarComponent.BalarEvent", "" } },
       {"requestMemLink%(num_cores)d", "Link to CPU memH (cache)", {} },
       {"requestGPUCacheLink%(num_cores)d", "Link to GPU memH (cache)", {} }
    )
@@ -140,16 +140,16 @@ private:
       SimpleMem::Request* original_sst_req;
    };
 
-   Gpgpusim();  // for serialization only
-   Gpgpusim(const Gpgpusim&); // do not implement
-   void operator=(const Gpgpusim&); // do not implement
+   Balar();  // for serialization only
+   Balar(const Balar&); // do not implement
+   void operator=(const Balar&); // do not implement
    uint32_t cpu_core_count;
    uint32_t gpu_core_count;
    uint32_t pending_transaction_count = 0;
    std::unordered_map<SimpleMem::Request::id_t, SimpleMem::Request*>* pendingTransactions;
    SimpleMem** gpu_to_cpu_cache_links;
    Link** gpu_to_core_links;
-   uint32_t latency; // The page fault latency/ the time spent by Gpgpusim to service a memory allocation request
+   uint32_t latency; // The page fault latency/ the time spent by Balar to service a memory allocation request
 
    SimpleMem** gpu_to_cache_links;
    uint32_t maxPendingCacheTrans;
@@ -157,6 +157,6 @@ private:
    uint32_t* numPendingCacheTransPerCore;
 
    Output* output;
-}; //END class Gpgpusim
-} //END namespace GpgpusimComponent
+}; //END class Balar
+} //END namespace BalarComponent
 } //END namespace SST
