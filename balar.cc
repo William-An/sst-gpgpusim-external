@@ -20,17 +20,17 @@
 #include <string>
 #include <iostream>
 
-#include "Gpgpusim.h"
+#include "balar.h"
 
 using namespace SST;
 using namespace SST::Interfaces;
-using namespace SST::GpgpusimComponent;
+using namespace SST::BalarComponent;
 
 
 //This is a global pointer to gpgpu-sim component  in order to be accessed from gpgpu-sim
-SST::GpgpusimComponent::Gpgpusim* my_gpu_component = NULL;
+SST::BalarComponent::Balar* my_gpu_component = NULL;
 
-Gpgpusim::Gpgpusim(SST::ComponentId_t id, SST::Params& params): Component(id)
+Balar::Balar(SST::ComponentId_t id, SST::Params& params): Component(id)
 {
 
     //registerAsPrimaryComponent();
@@ -43,7 +43,7 @@ Gpgpusim::Gpgpusim(SST::ComponentId_t id, SST::Params& params): Component(id)
     maxPendingCacheTrans = (uint32_t) params.find<uint32_t>("maxcachetrans", 512);
 
     int verbosity = params.find<int>("verbose", 0);
-    output = new SST::Output("GpgpusimComponent[@f:@l:@p] ", verbosity, 0, SST::Output::STDOUT);
+    output = new SST::Output("BalarComponent[@f:@l:@p] ", verbosity, 0, SST::Output::STDOUT);
 
     //Ensure that GPGP-sim has the same as SST gpu cores
     SST_gpgpusim_numcores_equal_check(gpu_core_count);
@@ -73,11 +73,11 @@ Gpgpusim::Gpgpusim(SST::ComponentId_t id, SST::Params& params): Component(id)
         sprintf(link_buffer_mem, "requestMemLink%" PRIu32, i);
 
         // Create a link back to ArielCore
-        gpu_to_core_links[i] = configureLink(link_buffer, "1ns", new Event::Handler<Gpgpusim>(this, &Gpgpusim::cpuHandler));
+        gpu_to_core_links[i] = configureLink(link_buffer, "1ns", new Event::Handler<Balar>(this, &Balar::cpuHandler));
 
         // Create and initialize CPU memHierarchy links (SimpleMem)
         gpu_to_cpu_cache_links[i] = dynamic_cast<SimpleMem*>(loadSubComponent("memHierarchy.memInterface", this, params));
-        gpu_to_cpu_cache_links[i]->initialize(link_buffer_mem, new SimpleMem::Handler<Gpgpusim>(this, &Gpgpusim::memoryHandler));
+        gpu_to_cpu_cache_links[i]->initialize(link_buffer_mem, new SimpleMem::Handler<Balar>(this, &Balar::memoryHandler));
         gpu_to_cpu_cache_links[i]->init(0);
 
     }
@@ -94,7 +94,7 @@ Gpgpusim::Gpgpusim(SST::ComponentId_t id, SST::Params& params): Component(id)
 
         // Create and initialize GPU memHierarchy links (SimpleMem)
         gpu_to_cache_links[i] = dynamic_cast<SimpleMem*>(loadSubComponent("memHierarchy.memInterface", this, params));
-        gpu_to_cache_links[i]->initialize(link_cache_buffer, new SimpleMem::Handler<Gpgpusim>(this, &Gpgpusim::gpuCacheHandler));
+        gpu_to_cache_links[i]->initialize(link_cache_buffer, new SimpleMem::Handler<Balar>(this, &Balar::gpuCacheHandler));
         gpu_to_cache_links[i]->init(0);
 
         numPendingCacheTransPerCore[i] = 0;
@@ -102,23 +102,23 @@ Gpgpusim::Gpgpusim(SST::ComponentId_t id, SST::Params& params): Component(id)
     }
 
     std::string gpu_clock = params.find<std::string>("clock", "1GHz");
-    registerClock( gpu_clock, new Clock::Handler<Gpgpusim>(this, &Gpgpusim::tick ) );
+    registerClock( gpu_clock, new Clock::Handler<Balar>(this, &Balar::tick ) );
 
     my_gpu_component = this;
 }
 
-Gpgpusim::Gpgpusim() : Component(-1)
+Balar::Balar() : Component(-1)
 {
     // for serialization only
 }
 
-bool Gpgpusim::tick(SST::Cycle_t x)
+bool Balar::tick(SST::Cycle_t x)
 {
       bool done = SST_gpu_core_cycle();
       return done;
 }
 
-void Gpgpusim::handleCPUReadRequest(uint64_t txSize, uint64_t pAddr)
+void Balar::handleCPUReadRequest(uint64_t txSize, uint64_t pAddr)
 {
     uint64_t addrOffset = physicalAddresses[0] % 64;
     SimpleMem::Request *req;
@@ -132,18 +132,18 @@ void Gpgpusim::handleCPUReadRequest(uint64_t txSize, uint64_t pAddr)
     }
 }
 
-void Gpgpusim::handleCPUWriteRequest(uint64_t txSize, uint64_t pAddr)
+void Balar::handleCPUWriteRequest(uint64_t txSize, uint64_t pAddr)
 {
 
 }
 
-void Gpgpusim::cpuHandler( SST::Event* e )
+void Balar::cpuHandler( SST::Event* e )
 {
-    GpgpusimEvent * temp_ptr =  dynamic_cast<GpgpusimComponent::GpgpusimEvent*> (e);
+    BalarEvent * temp_ptr =  dynamic_cast<BalarComponent::BalarEvent*> (e);
     if( temp_ptr->getType() == EventType::REQUEST ) {
 
       output->verbose(CALL_INFO, 4, 0, "GPU received a request event: ");
-      GpgpusimEvent * tse = new GpgpusimEvent(EventType::RESPONSE);
+      BalarEvent * tse = new BalarEvent(EventType::RESPONSE);
       switch(temp_ptr->API) {
          case GPU_REG_FAT_BINARY:
             tse->CA.register_fatbin.fat_cubin_handle = __cudaRegisterFatBinarySST(temp_ptr->CA.file_name);
@@ -300,7 +300,7 @@ void Gpgpusim::cpuHandler( SST::Event* e )
    }
 }
 
-void Gpgpusim::gpuCacheHandler(SimpleMem::Request* event)
+void Balar::gpuCacheHandler(SimpleMem::Request* event)
 {
    SimpleMem::Request::id_t mev_id = event->id;
    auto find_entry = gpuCachePendingTransactions->find(mev_id);
@@ -317,7 +317,7 @@ void Gpgpusim::gpuCacheHandler(SimpleMem::Request* event)
    }
 }
 
-void Gpgpusim::memoryHandler(SimpleMem::Request* event)
+void Balar::memoryHandler(SimpleMem::Request* event)
 {
    SimpleMem::Request::id_t mev_id = event->id;
    auto find_entry = pendingTransactions->find(mev_id);
@@ -329,7 +329,7 @@ void Gpgpusim::memoryHandler(SimpleMem::Request* event)
       output->verbose(CALL_INFO, 4, 0, "CUDA total GPU ACK %" PRIu64 " of total %" PRIu64 "\n", ackTransfer, totalTransfer);
       // Finished receiving data for a CUDA memcpy operation
       if(ackTransfer == totalTransfer) {
-         GpgpusimEvent * tse = new GpgpusimEvent(EventType::RESPONSE);
+         BalarEvent * tse = new BalarEvent(EventType::RESPONSE);
          tse->API = GPU_MEMCPY_RET;
 
          if(memcpyKind == cudaMemcpyHostToDevice){
@@ -459,12 +459,12 @@ void Gpgpusim::memoryHandler(SimpleMem::Request* event)
    }
 }
 
-bool Gpgpusim::is_SST_buffer_full(unsigned core_id)
+bool Balar::is_SST_buffer_full(unsigned core_id)
 {
    return (numPendingCacheTransPerCore[core_id] == maxPendingCacheTrans);
 }
 
-void Gpgpusim::send_read_request_SST(unsigned core_id, uint64_t address, uint64_t size, void* mem_req)
+void Balar::send_read_request_SST(unsigned core_id, uint64_t address, uint64_t size, void* mem_req)
 {
    assert(numPendingCacheTransPerCore[core_id] < maxPendingCacheTrans);
    SimpleMem::Request* req = new SimpleMem::Request(SimpleMem::Request::Read, address, size);
@@ -475,7 +475,7 @@ void Gpgpusim::send_read_request_SST(unsigned core_id, uint64_t address, uint64_
    gpu_to_cache_links[core_id]->sendRequest(req);
 }
 
-void Gpgpusim::send_write_request_SST(unsigned core_id, uint64_t address, uint64_t size, void* mem_req)
+void Balar::send_write_request_SST(unsigned core_id, uint64_t address, uint64_t size, void* mem_req)
 {
    assert(numPendingCacheTransPerCore[core_id] < maxPendingCacheTrans);
    SimpleMem::Request* req = new SimpleMem::Request(SimpleMem::Request::Write, address, size);
@@ -485,15 +485,15 @@ void Gpgpusim::send_write_request_SST(unsigned core_id, uint64_t address, uint64
    gpu_to_cache_links[core_id]->sendRequest(req);
 }
 
-void Gpgpusim::SST_callback_memcpy_H2D_done()
+void Balar::SST_callback_memcpy_H2D_done()
 {
-   GpgpusimEvent * tse = new GpgpusimEvent(EventType::RESPONSE);
+   BalarEvent * tse = new BalarEvent(EventType::RESPONSE);
    tse->API = GPU_MEMCPY_RET;
    is_stalled = false;
    gpu_to_core_links[0]->send(latency, tse);
 }
 
-void Gpgpusim::SST_callback_memcpy_D2H_done()
+void Balar::SST_callback_memcpy_D2H_done()
 {
    int index;
    uint64_t addr_offset;

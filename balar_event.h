@@ -30,15 +30,15 @@
 using namespace SST;
 
 
-namespace SST{ namespace GpgpusimComponent{
+namespace SST{ namespace BalarComponent{
 
     enum EventType {REQUEST, RESPONSE};
 
-    // Thie defines a class for events of Gpgpusim
-    class GpgpusimEvent : public SST::Event
+    // Thie defines a class for events of Balar
+    class BalarEvent : public SST::Event
     {
         private:
-            GpgpusimEvent() {hint = -1; } // For serialization
+            BalarEvent() {hint = -1; } // For serialization
             EventType ev;
             long long int address;
             long long int paddress;
@@ -109,7 +109,7 @@ namespace SST{ namespace GpgpusimComponent{
             };
             CudaArguments CA;
             GpuApi_t API;
-            GpgpusimEvent(EventType y) : SST::Event(){ ev = y; }
+            BalarEvent(EventType y) : SST::Event(){ ev = y; }
 
             void setType(int ev1) { ev = static_cast<EventType>(ev1);}
             int getType() { return ev; }
@@ -128,7 +128,7 @@ namespace SST{ namespace GpgpusimComponent{
                         }
 
 
-                        ImplementSerializable(SST::GpgpusimComponent::GpgpusimEvent);
+                        ImplementSerializable(SST::BalarComponent::BalarEvent);
 
     };
 
