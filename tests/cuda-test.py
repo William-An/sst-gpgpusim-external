@@ -67,7 +67,7 @@ router.addParams({
 })
 
 # Add GPGPU-sim Component
-gpu = sst.Component("gpu0", "Gpgpusim.Gpgpusim")
+gpu = sst.Component("gpu0", "balar.balar")
 gpu.addParams(config.getGPUConfig())
 
 # Configure CPU mem hirerchy
