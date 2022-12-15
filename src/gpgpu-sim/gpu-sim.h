@@ -28,6 +28,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+
 #ifndef GPU_SIM_H
 #define GPU_SIM_H
 
@@ -402,7 +403,7 @@ class gpgpu_sim_config : public power_config,
 
     m_valid = true;
   }
-
+  unsigned get_core_freq() const { return core_freq; }
   unsigned num_shader() const { return m_shader_config.num_shader(); }
   unsigned num_cluster() const { return m_shader_config.n_simt_clusters; }
   unsigned get_max_concurrent_kernel() const { return max_concurrent_kernel; }

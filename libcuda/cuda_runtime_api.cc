@@ -3647,7 +3647,7 @@ void cuda_runtime_api::cuobjdumpInit(const char *fn) {
 #else
 void cuda_runtime_api::cuobjdumpInit() {
 #endif
-  CUctx_st *context = GPGPUSim_Context();
+  CUctx_st *context = GPGPUSim_Context(gpgpu_ctx);
   
 #ifdef __SST__
   extract_code_using_cuobjdump(fn);  // extract all the output of cuobjdump to 
