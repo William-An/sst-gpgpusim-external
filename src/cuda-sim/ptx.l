@@ -1,31 +1,34 @@
 /*
-Copyright (c) 2009-2011, Tor M. Aamodt
-The University of British Columbia
+Copyright (c) 2009-2021, Tor M. Aamodt, Vijay Kandiah, Nikos Hardavellas, 
+Mahmoud Khairy, Junrui Pan, Timothy G. Rogers
+The University of British Columbia, Northwestern University, Purdue University
 All rights reserved.
-
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
 
-Redistributions of source code must retain the above copyright notice, this
-list of conditions and the following disclaimer.
-Redistributions in binary form must reproduce the above copyright notice, this
-list of conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.
-Neither the name of The University of British Columbia nor the names of its
-contributors may be used to endorse or promote products derived from this
-software without specific prior written permission.
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer;
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution;
+3. Neither the names of The University of British Columbia, Northwestern 
+   University nor the names of their contributors may be used to
+   endorse or promote products derived from this software without specific
+   prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
 */
+
 
 %option nounput
 %option noyywrap
@@ -69,6 +72,7 @@ andn	TC; yylval->int_value = ANDN_OP; return OPCODE;
 atom	TC; yylval->int_value = ATOM_OP; return OPCODE;
 bar.warp 	TC; yylval->int_value = NOP_OP; return OPCODE;
 bar 	TC; yylval->int_value = BAR_OP; return OPCODE;
+barrier	TC; yylval->int_value = BAR_OP; return OPCODE;
 bfe     TC; yylval->int_value = BFE_OP; return OPCODE;
 bfi     TC; yylval->int_value = BFI_OP; return OPCODE;
 bfind   TC; yylval->int_value = BFIND_OP; return OPCODE;
@@ -130,7 +134,6 @@ selp	TC; yylval->int_value = SELP_OP; return OPCODE;
 setp    TC; yylval->int_value = SETP_OP; return OPCODE;
 set	TC; yylval->int_value = SET_OP; return OPCODE;
 shfl	TC; yylval->int_value = SHFL_OP; return OPCODE;
-shf	TC; yylval->int_value = SHF_OP; return OPCODE;
 shl     TC; yylval->int_value = SHL_OP; return OPCODE;
 shr     TC; yylval->int_value = SHR_OP; return OPCODE;
 sin	TC; yylval->int_value = SIN_OP; return OPCODE;
@@ -159,6 +162,7 @@ vshl    TC; yylval->int_value = VSHL_OP; return OPCODE;
 vshr    TC; yylval->int_value = VSHR_OP; return OPCODE;
 vsub    TC; yylval->int_value = VSUB_OP; return OPCODE;
 vote	TC; yylval->int_value = VOTE_OP; return OPCODE;
+activemask TC; yylval->int_value = ACTIVEMASK_OP; return OPCODE;
 xor     TC; yylval->int_value = XOR_OP; return OPCODE;
 nop     TC; yylval->int_value = NOP_OP; return OPCODE;
 break  TC; yylval->int_value = BREAK_OP; return OPCODE;
@@ -167,15 +171,26 @@ breakaddr  TC; yylval->int_value = BREAKADDR_OP; return OPCODE;
 "CPTX_END"	printf("ENDING CUSTOM PTX.\n"); BEGIN(IN_COMMENT);
 
 <INITIAL,NOT_OPCODE,IN_INST,IN_FUNC_DECL>{
-\.a\.sync TC; yylval->int_value = LOAD_A; return WMMA_DIRECTIVE;
-\.b\.sync TC; yylval->int_value = LOAD_B; return WMMA_DIRECTIVE;
-\.c\.sync TC; yylval->int_value = LOAD_C; return WMMA_DIRECTIVE;
-\.d\.sync TC; yylval->int_value = STORE_D; return WMMA_DIRECTIVE;
-\.mma\.sync TC;yylval->int_value=MMA; return WMMA_DIRECTIVE;
+\.a\.sync\.aligned TC; yylval->int_value = LOAD_A; return WMMA_DIRECTIVE;
+\.b\.sync\.aligned TC; yylval->int_value = LOAD_B; return WMMA_DIRECTIVE;
+\.c\.sync\.aligned TC; yylval->int_value = LOAD_C; return WMMA_DIRECTIVE;
+\.d\.sync\.aligned TC; yylval->int_value = STORE_D; return WMMA_DIRECTIVE;
+\.mma\.sync\.aligned TC;yylval->int_value=MMA; return WMMA_DIRECTIVE;
 
 \.row TC; yylval->int_value = ROW; return LAYOUT;
 \.col TC; yylval->int_value = COL; return LAYOUT;
+\.m16n16k16\.global TC; yylval->int_value = M16N16K16; return CONFIGURATION;
+\.m32n8k16\.global TC; yylval->int_value = M32N8K16; return CONFIGURATION;
+\.m8n32k16\.global TC;  yylval->int_value = M8N32K16; return CONFIGURATION;
+
+\.m16n16k16\.shared TC; yylval->int_value = M16N16K16; return CONFIGURATION;
+\.m32n8k16\.shared TC; yylval->int_value = M32N8K16; return CONFIGURATION;
+\.m8n32k16\.shared TC;  yylval->int_value = M8N32K16; return CONFIGURATION;
+
 \.m16n16k16 TC; yylval->int_value = M16N16K16; return CONFIGURATION;
+\.m32n8k16 TC; yylval->int_value = M32N8K16; return CONFIGURATION;
+\.m8n32k16 TC;  yylval->int_value = M8N32K16; return CONFIGURATION;
+
 \.f4e TC;  return PRMT_F4E_MODE;
 \.b4e TC;  return PRMT_B4E_MODE;
 \.rc8 TC;  return PRMT_RC8_MODE;
@@ -371,9 +386,6 @@ breakaddr  TC; yylval->int_value = BREAKADDR_OP; return OPCODE;
 \.down	TC; return DOWN_OPTION;
 \.bfly	TC; return BFLY_OPTION;
 \.idx	TC; return IDX_OPTION;
-\.l     TC; return L_OPTION;
-\.r     TC; return R_OPTION;
-\.wrap	TC; return WRAP_OPTION;
 
 \.popc	TC; return ATOMIC_POPC;
 \.and	TC; return ATOMIC_AND;
