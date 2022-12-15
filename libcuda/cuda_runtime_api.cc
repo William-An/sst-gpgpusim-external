@@ -3769,6 +3769,8 @@ void gpgpu_context::cuobjdumpParseBinary(unsigned int handle) {
 
   // TODO: Remove temporarily files as per configurations
 }
+}
+
 extern "C" {
 
 #ifdef __SST__
