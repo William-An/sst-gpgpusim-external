@@ -43,6 +43,25 @@
 static int sg_argc = 3;
 static const char *sg_argv[] = {"", "-config", "gpgpusim.config"};
 
+#ifdef __SST__
+GPGPUsim_ctx* the_gpgpusim =  NULL;
+
+GPGPUsim_ctx* GPGPUsim_ctx_ptr(){
+	if(the_gpgpusim == NULL)
+		the_gpgpusim = GPGPU_Context()->the_gpgpusim;
+
+	return the_gpgpusim;
+}
+
+class gpgpu_sim* g_the_gpu() {
+	return GPGPUsim_ctx_ptr()->g_the_gpu;
+}
+
+class stream_manager* g_stream_manager()  {
+	return GPGPUsim_ctx_ptr()->g_stream_manager;
+}
+#endif
+
 void *gpgpu_sim_thread_sequential(void *ctx_ptr) {
   gpgpu_context *ctx = (gpgpu_context *)ctx_ptr;
   // at most one kernel running at a time
@@ -217,7 +236,7 @@ bool SST_Cycle() {
   if (!g_the_gpu()->active()) {
     g_the_gpu()->print_stats();
     g_the_gpu()->update_stats();
-    print_simulation_time();
+    GPGPU_Context()->print_simulation_time();
   }
 
   if (GPGPUsim_ctx_ptr()->break_limit) {

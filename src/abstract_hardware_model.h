@@ -893,11 +893,6 @@ class mem_fetch;
 class mem_fetch_interface {
  public:
   virtual bool full(unsigned size, bool write) const = 0;
-#ifdef __SST__
-  // Weili: if use with SST, will direct all mem access except for constant, tex, and inst reads
-  // Weili: to SST mem system, thus requiring the mem_access_type information to be passed in
-  virtual bool full(unsigned size, bool write, mem_access_type type) const = 0;
-#endif
   virtual void push(mem_fetch *mf) = 0;
 };
 

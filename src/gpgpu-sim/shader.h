@@ -2667,7 +2667,13 @@ class SST_memory_interface : public mem_fetch_interface {
     m_core = core;
     m_cluster = cluster;
   }
-  virtual bool full(unsigned size, bool write, mem_access_type type) const {
+  // Weili: Get around abstract class since SST
+  // Weili: will never use this method 
+  virtual bool full(unsigned size, bool write) const { return true; }
+
+  // Weili: if use with SST, will direct all mem access except for constant, tex, and inst reads
+  // Weili: to SST mem system (i.e. not modeling constant mem right now), thus requiring the mem_access_type information to be passed in
+  bool full(unsigned size, bool write, mem_access_type type) const {
     return m_cluster->SST_injection_buffer_full(size, write, type);
   }
   virtual void push(mem_fetch *mf) {

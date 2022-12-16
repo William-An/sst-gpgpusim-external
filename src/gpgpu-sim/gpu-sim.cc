@@ -961,12 +961,12 @@ gpgpu_sim::gpgpu_sim(const gpgpu_sim_config &config, gpgpu_context *ctx)
   partiton_replys_in_parallel_total = 0;
 
 #ifdef __SST__
-  // TODO: Weili: Maybe try create a subclass similar to the exec_gpgpu_sim for
-  // TODO: Weili: SST simulation?
+  // Weili: Use exec_simt_core_cluster since it is responsible for
+  // Weili: performance modeling
   m_cluster = new simt_core_cluster *[m_shader_config->n_simt_clusters];
   for (unsigned i = 0; i < m_shader_config->n_simt_clusters; i++)
     m_cluster[i] =
-        new simt_core_cluster(this, i, m_shader_config, m_memory_config,
+        new exec_simt_core_cluster(this, i, m_shader_config, m_memory_config,
                               m_shader_stats, m_memory_stats);
 
   if (config.is_SST_mode())
@@ -2283,8 +2283,9 @@ void gpgpu_sim::SST_cycle() {
 #ifdef GPGPUSIM_POWER_MODEL
   if (m_config.g_power_simulation_enabled) {
     mcpat_cycle(m_config, getShaderCoreConfig(), m_gpgpusim_wrapper,
-                m_power_stats, m_config.gpu_stat_sample_freq, gpu_tot_sim_cycle,
-                gpu_sim_cycle, gpu_tot_sim_insn, gpu_sim_insn);
+                  m_power_stats, m_config.gpu_stat_sample_freq,
+                  gpu_tot_sim_cycle, gpu_sim_cycle, gpu_tot_sim_insn,
+                  gpu_sim_insn, m_config.g_dvfs_enabled);
   }
 #endif
 
@@ -2295,7 +2296,7 @@ void gpgpu_sim::SST_cycle() {
     time_t curr_time;
     time(&curr_time);
     unsigned long long elapsed_time =
-        MAX(curr_time - GPGPUsim_ctx_ptr()->g_simulation_starttime, 1);
+        MAX(curr_time - gpgpu_ctx->the_gpgpusim->g_simulation_starttime, 1);
     if ((elapsed_time - last_liveness_message_time) >=
         m_config.liveness_message_freq) {
       days = elapsed_time / (3600 * 24);
