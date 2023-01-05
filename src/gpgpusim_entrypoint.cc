@@ -319,12 +319,17 @@ gpgpu_sim *gpgpu_context::gpgpu_ptx_sim_init_perf() {
 void gpgpu_context::start_sim_thread(int api) {
   if (the_gpgpusim->g_sim_done) {
     the_gpgpusim->g_sim_done = false;
-    if (api == 1) {
-      pthread_create(&(the_gpgpusim->g_simulation_thread), NULL,
-                     gpgpu_sim_thread_concurrent, (void *)this);
+    if( !g_the_gpu()->is_SST_mode()) {
+      // Do not create the concurrent thread in the SST mode
+      if (api == 1) {
+        pthread_create(&(the_gpgpusim->g_simulation_thread), NULL,
+                      gpgpu_sim_thread_concurrent, (void *)this);
+      } else {
+        pthread_create(&(the_gpgpusim->g_simulation_thread), NULL,
+                      gpgpu_sim_thread_sequential, (void *)this);
+      }
     } else {
-      pthread_create(&(the_gpgpusim->g_simulation_thread), NULL,
-                     gpgpu_sim_thread_sequential, (void *)this);
+      g_the_gpu()->init();
     }
   }
 }
@@ -348,8 +353,13 @@ void gpgpu_context::print_simulation_time() {
   const unsigned cycles_per_sec =
       (unsigned)(the_gpgpusim->g_the_gpu->gpu_tot_sim_cycle / difference);
   printf("gpgpu_simulation_rate = %u (cycle/sec)\n", cycles_per_sec);
-  printf("gpgpu_silicon_slowdown = %ux\n",
-         the_gpgpusim->g_the_gpu->shader_clock() * 1000 / cycles_per_sec);
+
+  if (cycles_per_sec == 0) {
+    printf("gpgpu_silicon_slowdown = Nan\n");
+  } else {
+    printf("gpgpu_silicon_slowdown = %ux\n",
+          the_gpgpusim->g_the_gpu->shader_clock() * 1000 / cycles_per_sec);
+  }
   fflush(stdout);
 }
 

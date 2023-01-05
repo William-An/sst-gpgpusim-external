@@ -245,6 +245,10 @@ stream_manager::stream_manager(gpgpu_sim *gpu, bool cuda_launch_blocking) {
   m_gpu = gpu;
   m_service_stream_zero = false;
   m_cuda_launch_blocking = cuda_launch_blocking;
+#ifdef __SST__
+  // Weili: In SST mode, cuda launch is blocking?
+  m_cuda_launch_blocking = true;
+#endif
   pthread_mutex_init(&m_lock, NULL);
   m_last_stream = m_streams.begin();
 }
@@ -469,7 +473,8 @@ void stream_manager::push(stream_operation op) {
     op.print(stdout);
     printf("\n");
   }
-  if (g_debug_execution >= 3) print_impl(stdout);
+  // if (g_debug_execution >= 3) print_impl(stdout);
+  print_impl(stdout);
   pthread_mutex_unlock(&m_lock);
 #ifdef __SST__
   if ((m_cuda_launch_blocking || stream == NULL) && !m_gpu->is_SST_mode()) {

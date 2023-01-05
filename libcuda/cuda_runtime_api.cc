@@ -2347,7 +2347,7 @@ extern "C" {
  *******************************************************************************/
 #ifdef __SST__
 void SST_receive_mem_reply(unsigned core_id, void *mem_req) {
-  CUctx_st *context = GPGPUSim_Context();
+  CUctx_st *context = GPGPUSim_Context(GPGPU_Context());
   (context->get_device()->get_gpgpu())->SST_receive_mem_reply(core_id, mem_req);
   // printf("GPGPU-sim: Recived Request\n");
 }
@@ -2355,7 +2355,7 @@ void SST_receive_mem_reply(unsigned core_id, void *mem_req) {
 bool SST_gpu_core_cycle() { return SST_Cycle(); }
 
 void SST_gpgpusim_numcores_equal_check(unsigned sst_numcores) {
-  CUctx_st *context = GPGPUSim_Context();
+  CUctx_st *context = GPGPUSim_Context(GPGPU_Context());
   (context->get_device()->get_gpgpu())
       ->SST_gpgpusim_numcores_equal_check(sst_numcores);
 }
@@ -2364,7 +2364,7 @@ uint64_t cudaMallocSST(void **devPtr, size_t size) {
   void *test_malloc;
   test_malloc = (void *)malloc(size);
   void **test_malloc2 = &test_malloc;
-  CUctx_st *context = GPGPUSim_Context();
+  CUctx_st *context = GPGPUSim_Context(GPGPU_Context());
   *test_malloc2 = context->get_device()->get_gpgpu()->gpu_malloc(size);
   printf("GPGPU-Sim PTX: cudaMallocing %zu bytes starting at 0x%llx..\n", size,
          (unsigned long long)*test_malloc2);
@@ -3774,19 +3774,17 @@ void gpgpu_context::cuobjdumpParseBinary(unsigned int handle) {
 extern "C" {
 
 #ifdef __SST__
-
 void **CUDARTAPI __cudaRegisterFatBinarySST(const char *fn) {
   return cudaRegisterFatBinaryInternal(fn, NULL);
 }
-
-#endif
-
+#else
 void **CUDARTAPI __cudaRegisterFatBinary(void *fatCubin) {
   if (g_debug_execution >= 3) {
     announce_call(__my_func__);
   }
   return cudaRegisterFatBinaryInternal(fatCubin);
 }
+#endif
 
 void CUDARTAPI __cudaRegisterFatBinaryEnd(void **fatCubinHandle) {
   if (g_debug_execution >= 3) {

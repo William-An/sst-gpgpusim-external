@@ -1115,9 +1115,12 @@ bool gpgpu_sim::active() {
   for (unsigned i = 0; i < m_shader_config->n_simt_clusters; i++)
     if (m_cluster[i]->get_not_completed() > 0) return true;
   ;
+#ifndef __SST__
+  // For SST mode, memory is handled by SST memhierachy
   for (unsigned i = 0; i < m_memory_config->m_n_mem; i++)
     if (m_memory_partition_unit[i]->busy() > 0) return true;
   ;
+#endif
 #ifdef __SST__
   if (!m_config.is_SST_mode() && icnt_busy()) return true;
 #else
@@ -1489,6 +1492,8 @@ void gpgpu_sim::gpu_print_stat() {
   }
 #endif
 
+#ifndef __SST__
+  // SST mode, no memory or L2 cache
   // performance counter that are not local to one shader
   m_memory_stats->memlatstat_print(m_memory_config->m_n_mem,
                                    m_memory_config->nbk);
@@ -1536,6 +1541,7 @@ void gpgpu_sim::gpu_print_stat() {
       total_l2_css.print_port_stats(stdout, "L2_cache");
     }
   }
+#endif
 
   if (m_config.gpgpu_cflog_interval != 0) {
     spill_log_to_file(stdout, 1, gpu_sim_cycle);
