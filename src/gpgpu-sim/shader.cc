@@ -2159,8 +2159,16 @@ bool ldst_unit::memory_cycle(warp_inst_t &inst,
         inst.is_store() ? WRITE_PACKET_SIZE : READ_PACKET_SIZE;
     unsigned size = access.get_size() + control_size;
     // printf("Interconnect:Addr: %x, size=%d\n",access.get_addr(),size);
+#ifdef __SST__
+    // SST need mf type here
+    // Cast it to SST_memory_interface pointer first as this full() method
+    // is not a virtual method in parent class
+    if (static_cast<SST_memory_interface*>(m_icnt)->full(size, inst.is_store() || inst.isatomic(), access.get_type())) {
+      stall_cond = ICNT_RC_FAIL;
+#else
     if (m_icnt->full(size, inst.is_store() || inst.isatomic())) {
       stall_cond = ICNT_RC_FAIL;
+#endif
     } else {
       mem_fetch *mf =
           m_mf_allocator->alloc(inst, access,
@@ -2704,8 +2712,14 @@ void ldst_unit::cycle() {
         m_response_fifo.pop_front();
       }
     } else {
+#ifdef __SST__
+      if (mf->get_type() == WRITE_ACK || 
+          ((m_config->gpgpu_perfect_mem || m_memory_config->SST_mode) && 
+          mf->get_is_write())) {
+#else
       if (mf->get_type() == WRITE_ACK ||
           (m_config->gpgpu_perfect_mem && mf->get_is_write())) {
+#endif
         m_core->store_ack(mf);
         m_response_fifo.pop_front();
         delete mf;

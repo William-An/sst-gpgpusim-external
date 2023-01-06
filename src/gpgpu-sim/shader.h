@@ -2669,7 +2669,10 @@ class SST_memory_interface : public mem_fetch_interface {
   }
   // Weili: Get around abstract class since SST
   // Weili: will never use this method 
-  virtual bool full(unsigned size, bool write) const { return true; }
+  virtual bool full(unsigned size, bool write) const { 
+    assert(false && "Use the full() method with access type instead!");
+    return true; 
+  }
 
   // Weili: if use with SST, will direct all mem access except for constant, tex, and inst reads
   // Weili: to SST mem system (i.e. not modeling constant mem right now), thus requiring the mem_access_type information to be passed in
