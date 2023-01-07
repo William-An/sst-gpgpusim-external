@@ -2361,6 +2361,9 @@ void SST_gpgpusim_numcores_equal_check(unsigned sst_numcores) {
 }
 
 uint64_t cudaMallocSST(void **devPtr, size_t size) {
+  if (g_debug_execution >= 3) {
+    announce_call(__my_func__);
+  }
   void *test_malloc;
   test_malloc = (void *)malloc(size);
   void **test_malloc2 = &test_malloc;
