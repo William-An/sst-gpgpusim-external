@@ -2884,7 +2884,8 @@ __host__ const char *CUDARTAPI cudaGetErrorString(cudaError_t error) {
 }
 
 #ifdef __SST__
-// TODO: Weili: Need to review later to see if still need to pass stream
+// Weili: Use the regular cudaConfigureCall instead in SST, this following
+// Weili: function could be removed
 __host__ cudaError_t CUDARTAPI cudaConfigureCallSST(dim3 gridDim, dim3 blockDim,
                                                     size_t sharedMem = 0,
                                                     cudaStream_t stream = 0) {

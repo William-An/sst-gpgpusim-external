@@ -245,10 +245,6 @@ stream_manager::stream_manager(gpgpu_sim *gpu, bool cuda_launch_blocking) {
   m_gpu = gpu;
   m_service_stream_zero = false;
   m_cuda_launch_blocking = cuda_launch_blocking;
-#ifdef __SST__
-  // Weili: In SST mode, cuda launch is blocking?
-  m_cuda_launch_blocking = true;
-#endif
   pthread_mutex_init(&m_lock, NULL);
   m_last_stream = m_streams.begin();
 }
