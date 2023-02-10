@@ -152,7 +152,7 @@
 #endif
 
 #ifdef __SST__
-extern bool SST_Cycle();	// TODO Need this for SST
+extern bool SST_Cycle();	// Need this for SST
 #endif
 
 /*DEVICE_BUILTIN*/
@@ -416,9 +416,8 @@ void setCuobjdumpsassfilename(
 //! processes (e.g. cuobjdump) reading /proc/<pid>/exe will see the emulator
 //! executable instead of the application binary.
 //!
-// TODO: In SST need the string to pass the binary information
-// TODO: as we cannot get it from /proc/self/exe
-// TODO: Use __SST__ flag throughout the repo?
+// In SST need the string to pass the binary information
+// as we cannot get it from /proc/self/exe
 #ifdef __SST__
 
 std::string g_self_exe_path;

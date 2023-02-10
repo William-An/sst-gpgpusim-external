@@ -124,7 +124,7 @@ void shader_core_ctx::create_front_pipeline() {
 
   if (m_config->sub_core_model) {
     // in subcore model, each scheduler should has its own issue register, so
-    // num scheduler = reg width
+    // ensure num scheduler = reg width
     assert(m_config->gpgpu_num_sched_per_core ==
            m_pipeline_reg[ID_OC_SP].get_size());
     assert(m_config->gpgpu_num_sched_per_core ==

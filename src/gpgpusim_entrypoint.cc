@@ -186,8 +186,6 @@ void *gpgpu_sim_thread_concurrent(void *ctx_ptr) {
   return NULL;
 }
 
-// TODO: Weili: Need to replace the following with newest apis
-// TODO: Weili: Refer to the `gpgpu_sim_thread_concurrent` function for details
 #ifdef __SST__
 bool sst_sim_cycles = false;
 

@@ -1493,7 +1493,7 @@ void gpgpu_sim::gpu_print_stat() {
 #endif
 
 #ifndef __SST__
-  // SST mode, no memory or L2 cache
+  // In SST mode, no memory or L2 cache
   // performance counter that are not local to one shader
   m_memory_stats->memlatstat_print(m_memory_config->m_n_mem,
                                    m_memory_config->nbk);

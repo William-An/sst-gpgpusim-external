@@ -469,8 +469,7 @@ void stream_manager::push(stream_operation op) {
     op.print(stdout);
     printf("\n");
   }
-  // if (g_debug_execution >= 3) print_impl(stdout);
-  print_impl(stdout);
+  if (g_debug_execution >= 3) print_impl(stdout);
   pthread_mutex_unlock(&m_lock);
 #ifdef __SST__
   if ((m_cuda_launch_blocking || stream == NULL) && !m_gpu->is_SST_mode()) {
